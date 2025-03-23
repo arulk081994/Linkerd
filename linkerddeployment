@@ -1,0 +1,294 @@
+# Proof of Concept (PoC): Deploying Linkerd on MicroK8s in AWS EC2
+
+
+Linkerd is a lightweight, open-source service mesh designed to provide observability, reliability, and security for microservices applications. It is particularly well-suited for Kubernetes environments. Below are the key use cases for Linkerd:
+
+1. Observability
+Linkerd provides deep insights into the behavior of your microservices, helping you understand and troubleshoot issues.
+
+Use Cases:
+Monitor Service Metrics:
+
+Automatically collect metrics like request rates, success rates, and latencies for all services in your cluster.
+
+Example: Identify which service is causing latency spikes or errors.
+
+Distributed Tracing:
+
+Integrate with tracing tools like Jaeger to provide end-to-end visibility into request flows across services.
+
+Example: Trace a request as it flows through multiple microservices to identify bottlenecks.
+
+Service Dependency Mapping:
+
+Provide a real-time map of service dependencies, helping you understand how services interact.
+
+Example: Visualize how a failure in one service impacts others.
+
+2. Reliability
+Linkerd improves the reliability of your microservices by providing features like retries, timeouts, and circuit breaking.
+
+Use Cases:
+Automatic Retries:
+
+Automatically retry failed requests, improving the resilience of your services.
+
+Example: Retry a failed database query due to a transient network issue.
+
+Timeouts:
+
+Set timeouts for requests to prevent cascading failures.
+
+Example: Prevent a slow downstream service from causing timeouts in upstream services.
+
+Circuit Breaking:
+
+Stop sending traffic to unhealthy services, allowing them to recover.
+
+Example: Stop sending requests to a service that is returning errors until it recovers.
+
+3. Security
+Linkerd enhances the security of your microservices by encrypting traffic and enforcing access policies.
+
+Use Cases:
+Mutual TLS (mTLS):
+
+Automatically encrypt all traffic between services using mTLS, ensuring secure communication.
+
+Example: Prevent eavesdropping or tampering with sensitive data in transit.
+
+Role-Based Access Control (RBAC):
+
+Integrate with Kubernetes RBAC to enforce access policies.
+
+Example: Restrict which services can communicate with each other.
+
+Zero-Trust Security:
+
+Implement a zero-trust security model, where no service is trusted by default.
+
+Example: Ensure that only authorized services can communicate with each other.
+
+4. Traffic Management
+Linkerd provides advanced traffic management capabilities, enabling you to control how traffic flows between services.
+
+Use Cases:
+Canary Deployments:
+
+Gradually roll out new versions of a service by routing a small percentage of traffic to the new version.
+
+Example: Test a new version of a service with 5% of traffic before rolling it out fully.
+
+Blue-Green Deployments:
+
+Switch traffic from an old version of a service to a new version instantly.
+
+Example: Deploy a new version of a service and switch traffic to it without downtime.
+
+Traffic Splitting:
+
+Split traffic between multiple versions of a service based on weights.
+
+Example: Route 80% of traffic to the stable version and 20% to the experimental version.
+
+5. Debugging and Troubleshooting
+Linkerd makes it easier to debug and troubleshoot issues in your microservices.
+
+Use Cases:
+Error Rate Monitoring:
+
+Identify services with high error rates and investigate the root cause.
+
+Example: Detect a service that is returning 500 errors and investigate why.
+
+Latency Analysis:
+
+Identify services with high latency and optimize their performance.
+
+Example: Find a service that is taking too long to respond and optimize its database queries.
+
+Service-Level Objectives (SLOs):
+
+Define and monitor SLOs for your services.
+
+Example: Ensure that 99% of requests to a service complete within 200ms.
+
+6. Multi-Cluster Support
+Linkerd supports multi-cluster deployments, enabling you to manage services across multiple Kubernetes clusters.
+
+Use Cases:
+Cross-Cluster Communication:
+
+Securely connect services running in different Kubernetes clusters.
+
+Example: Connect a frontend service in one cluster to a backend service in another cluster.
+
+Global Load Balancing:
+
+Distribute traffic across services in multiple clusters.
+
+Example: Route traffic to the nearest cluster based on the user’s location.
+
+7. Ease of Use
+Linkerd is designed to be lightweight and easy to use, making it a great choice for teams new to service meshes.
+
+Use Cases:
+Quick Setup:
+
+Linkerd can be installed in minutes with a single command.
+
+Example: Get started with Linkerd in a development environment to test its features.
+
+No Code Changes:
+
+Linkerd works by injecting a sidecar proxy into your pods, requiring no changes to your application code.
+
+Example: Add Linkerd to an existing application without modifying its code.
+
+Summary
+Linkerd is a powerful service mesh that provides observability, reliability, security, and traffic management for Kubernetes microservices. Its ease of use and lightweight design make it an excellent choice for teams looking to improve their microservices architecture.
+
+Let me know if you need further assistance!
+
+
+
+----> To Setup sample borken application-----
+
+
+## **Objective**
+To deploy **Linkerd** as a service mesh on **MicroK8s** running on an **Ubuntu-based AWS EC2 instance** and validate its functionality by running a sample application.
+
+---
+
+## **Step 1: Launch an EC2 Instance with Ubuntu OS**
+
+1. Launch an **AWS EC2 instance** with **Ubuntu 22.04** or later.
+2. Ensure **security groups** allow required ports (**22 for SSH, 8084 for Linkerd Dashboard**).
+3. Connect to the instance using SSH:
+   ```sh
+   ssh -i your-key.pem ubuntu@your-ec2-public-ip
+   ```
+
+---
+
+## **Step 2: Install MicroK8s on Ubuntu**
+
+Follow the official tutorial: [Install MicroK8s](https://ubuntu.com/tutorials/install-a-local-kubernetes-with-microk8s#2-deploying-microk8s)
+
+### **Install MicroK8s and Required Dependencies**
+```sh
+sudo snap install microk8s --classic
+sudo snap install kubectl --classic
+```
+
+### **Configure Kubernetes Permissions**
+```sh
+mkdir -p /home/ubuntu/.kube
+sudo usermod -a -G microk8s ubuntu
+sudo chown -R ubuntu ~/.kube
+newgrp microk8s
+microk8s config > ~/.kube/config
+```
+
+### **Verify MicroK8s is Running**
+```sh
+microk8s status --wait-ready
+```
+
+---
+
+## **Step 3: Install and Configure Linkerd**
+
+Follow the [Linkerd Official Guide](https://linkerd.io/2.17/getting-started/).
+
+### **Enable Linkerd in MicroK8s**
+```sh
+microk8s enable community
+microk8s enable linkerd
+```
+
+### **Check Linkerd Installation**
+```sh
+microk8s linkerd check
+```
+
+---
+
+## **Step 4: Deploy a Sample Application (Emojivoto)**
+
+```sh
+curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/emojivoto.yml | kubectl apply -f -
+```
+
+### **Inject Linkerd into the Emojivoto Deployment**
+```sh
+kubectl get -n emojivoto deploy -o yaml | microk8s linkerd inject - | kubectl apply -f -
+```
+
+### **Check if Proxy is Injected**
+```sh
+microk8s linkerd -n emojivoto check --proxy
+microk8s linkerd check
+```
+
+---
+
+## **Step 5: Expose Services via Port Forwarding**
+
+### **Expose Emojivoto Web Service**
+```sh
+kubectl -n emojivoto port-forward svc/web-svc 8080:80 --address 0.0.0.0
+```
+
+Access Emojivoto at:
+```
+http://44.204.206.140:8080/
+```
+
+**Note:** If you click around Emojivoto, you might notice that it’s a little broken! For example, if you try to vote for the **donut emoji**, you’ll get a **404 page**.
+
+---
+
+### **Modify Linkerd Dashboard Deployment for External Access**
+
+Edit the deployment file:
+```sh
+kubectl edit deployment web -n linkerd-viz
+```
+Find and modify this line in the args section:
+```yaml
+        - -enforced-host=.*
+```
+
+Verify pods are running:
+```sh
+kubectl get po -n linkerd-viz
+```
+
+### **Expose Linkerd Dashboard**
+```sh
+kubectl port-forward -n linkerd-viz svc/web 8084:8084 --address 0.0.0.0
+```
+
+Access Linkerd Dashboard via:
+```
+http://44.204.206.140:8084/
+```
+(Replace with your **EC2 public IP**)
+
+---
+
+## **Conclusion**
+
+This PoC demonstrates the successful deployment of **Linkerd** on **MicroK8s** in an **AWS EC2 Ubuntu instance**. The **Emojivoto application** was deployed with Linkerd proxy injection, and the **Linkerd Dashboard** was made accessible externally for monitoring and visualization.
+
+---
+
+## **Next Steps**
+- Implement **TLS security** for exposed ports.
+- Integrate **Grafana** for detailed service mesh metrics.
+- Deploy a **production-ready Kubernetes cluster with HA settings.**
+
+---
+
+
